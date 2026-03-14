@@ -1,0 +1,20 @@
+version: "2.1"
+
+services:
+  backend:
+    image: mlm-backend:latest
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+
+  frontend:
+    image: mlm-frontend:latest
+    restart: always
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend/.env.local
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
