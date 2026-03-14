@@ -278,6 +278,41 @@ docker-compose -f docker-compose.offline.yml up -d
 
 This starts infrastructure services only (Mosquitto, InfluxDB, Telegraf, Grafana, PostgreSQL) with old image versions.
 
+### Offline image transfer workflow
+For air-gapped or DNS-restricted servers, export the required Docker images from a machine that has internet access, move the archive to the server, then load it locally before starting Compose.
+
+On an internet-connected machine:
+
+```bash
+docker pull postgres:16-alpine
+docker pull influxdb:1.8
+docker pull grafana/grafana:10.2.0
+docker pull eclipse-mosquitto:2
+docker pull telegraf:1.29
+docker save postgres:16-alpine influxdb:1.8 grafana/grafana:10.2.0 eclipse-mosquitto:2 telegraf:1.29 > mlm_images.tar
+```
+
+Then copy `mlm_images.tar` to the target server and load it:
+
+```bash
+docker load < mlm_images.tar
+docker compose up -d
+```
+
+Important: `docker compose up -d` still builds the local `backend` and `frontend` images from source. On a fully offline server, prebuild those app images on the internet-connected machine as well, then export and load them the same way:
+
+```bash
+docker compose build backend frontend
+docker save mlm-backend:latest mlm-frontend:latest > mlm_app_images.tar
+```
+
+On the server:
+
+```bash
+docker load < mlm_app_images.tar
+docker compose up -d --no-build
+```
+
 ### 5. Create first admin user
 ```bash
 curl -X POST http://192.168.2.10:3001/api/auth/register \
@@ -327,5 +362,6 @@ curl -X POST http://192.168.2.10:3001/api/auth/register \
 - **Frontend**: `@tanstack/react-virtual` renders only visible device cards (30–50 cards instead of 1,000)
 - **InfluxDB queries**: Limited to 10,000 points per request; use time bucketing (`GROUP BY time(1m)`) for long ranges
 - **Offline detection**: Devices are marked offline after 10 s without a message (checked every 5 s)
-#   m l m  
+#   m l m 
+ 
  
