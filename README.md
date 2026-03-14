@@ -270,13 +270,13 @@ docker compose up -d
 ```
 
 ### Offline start (legacy cached images)
-If the server cannot reach Docker Hub DNS/internet, use the offline compose variant that references legacy cached image names:
+If the server cannot reach Docker Hub DNS/internet, use the offline compose variant after preloading the required images:
 
 ```bash
 docker-compose -f docker-compose.offline.yml up -d
 ```
 
-This starts infrastructure services only (Mosquitto, InfluxDB, Telegraf, Grafana, PostgreSQL) with old image versions.
+This starts the full stack (Mosquitto, InfluxDB, Telegraf, Grafana, PostgreSQL, backend, frontend) from preloaded images without rebuilding on the server.
 
 ### Offline image transfer workflow
 For air-gapped or DNS-restricted servers, export the required Docker images from a machine that has internet access, move the archive to the server, then load it locally before starting Compose.
@@ -296,10 +296,9 @@ Then copy `mlm_images.tar` to the target server and load it:
 
 ```bash
 docker load < mlm_images.tar
-docker compose up -d
 ```
 
-Important: `docker compose up -d` still builds the local `backend` and `frontend` images from source. On a fully offline server, prebuild those app images on the internet-connected machine as well, then export and load them the same way:
+Prebuild the app images on the internet-connected machine as well, then export and load them the same way:
 
 ```bash
 docker compose build backend frontend
@@ -310,7 +309,7 @@ On the server:
 
 ```bash
 docker load < mlm_app_images.tar
-docker compose up -d --no-build
+docker-compose -f docker-compose.offline.yml up -d
 ```
 
 ### 5. Create first admin user
