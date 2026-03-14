@@ -1,0 +1,66 @@
+version: "2.1"
+
+services:
+  mosquitto:
+    image: jllopis/mosquitto:latest
+    restart: always
+    volumes:
+      - ./mosquitto/mosquitto.conf:/etc/mosquitto/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    ports:
+      - "1883:1883"
+      - "9001:9883"
+
+  influxdb:
+    image: influxdb:latest
+    restart: always
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      INFLUXDB_DB: telegraf
+
+  telegraf:
+    image: telegraf:latest
+    restart: always
+    hostname: irrigation
+    depends_on:
+      - influxdb
+      - mosquitto
+    volumes:
+      - ./telegraf-esp32.conf:/etc/telegraf/telegraf.conf:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    depends_on:
+      - influxdb
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3003:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD-admin}
+
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: irrigation
+      POSTGRES_USER: irrigation_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-changethispassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  influxdb_data:
+  grafana_data:
+  postgres_data:
